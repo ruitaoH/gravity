@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form action="/backend/api/user/signup" method="post">
+    用户名:<input type="text" name="nickname"><br />
+    手机:<input type="text" name="phone"><br />
+    密码:<input type="password" name="password"><br />
+    经度:<input type="number" name="verify_location_long"><br />
+    维度:<input type="number" name="verify_location_lat"><br />
+{#    头像:<input type="text" name="avatar"><br />#}
+    性别:<input type="text" name="gender"><br />
+    生日:<input type="number" name="birthday"><br />
+    班级:<input type="text" name="clazz"><br />
+    是否屏蔽本班同学:<input type="checkbox" checked="true" name="block_same_class"><br />
+    家乡:<input type="text" name="hometown"><br />
+    情感状态:<input type="text" name="love_status"><br />
+    性取向:<input type="text" name="prefer_gender"><br />
+    联系方式:<input type="text" name="contact"><br />
+    校区:<input type="text" name="region"><br />
+    <input type="submit">
+</form>
+</body>
+</html>
