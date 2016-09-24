@@ -42,7 +42,7 @@ def generate_random_code(length=4):
 def send_sms_to_phone(phone, message):
     resp = requests.post(
         "http://sms-api.luosimao.com/v1/send.json",
-        auth=("api", "key-9b8c979ffeae5cf5921076854a36042f"),
+        auth=("api", "api-key"),
         data={
             "mobile": phone,
             "message": message
@@ -155,7 +155,7 @@ def post_signup_sms(request):
     verify.save()
 
     # send sms
-    sms = r'欢迎注册gravity，验证码为{}【gravity】'.format(code)
+    sms = r'欢迎注册gravity，验证码为{}【引力】'.format(code)
     r = send_sms_to_phone(phone, sms)
     print(r)
     body = response('ok', 'send sms success', {})
@@ -180,7 +180,7 @@ def post_password_sms(request):
     verify.save()
 
     # send sms
-    sms = r'正在找回gravity密码，验证码为{}【luosimao】'.format(code)
+    sms = r'正在找回gravity密码，验证码为{}【引力】'.format(code)
     send_sms_to_phone(phone, sms)
     body = response('ok', 'send sms success', {})
     return HttpResponse(body)
@@ -255,11 +255,16 @@ def phone_signup(request):
     tags_count = len(interest_tags)
 
     pw_salt = models.User.generate_pw_salt()
+
+    print('pw_salt type:',type(pw_salt))
+    print('password type:',type(password))
+    print(type(models.User.encrypt(pw_salt.decode(), password)))
+
     user = models.User(
         nickname=nickname,
         phone=phone,
         pw_salt=pw_salt,
-        password=models.User.encrypt(pw_salt, password),
+        password=models.User.encrypt(pw_salt.decode(), password), # make_password(str,str,'加密算法') ---> 返回str
         verify_location_long=verify_location_long,
         verify_location_lat=verify_location_lat,
         avatar_url=avatar,

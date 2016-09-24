@@ -58,7 +58,7 @@ password_sms -> verify_phone -> password
 
 ## apis
 ```
-### POST /backend/api/user/signup_sms 发送注册短信 √
+### POST /backend/api/user/signup_sms 发送注册短信 √ ---> 发送验证码
 * phone 手机号 11位数字
 
 ```
@@ -96,7 +96,7 @@ password_sms -> verify_phone -> password
 }
 ```
 
-### POST /backend/api/user/verify_phone 验证手机 √
+### POST /backend/api/user/verify_phone 验证手机 √ ---> 提交验证码
 * phone 手机号 11位数字
 * code 验证码 4位数字
 * type 类型 字符串 只能是`password - 重置密码 signup - 注册`
