@@ -1,12 +1,14 @@
 # coding: utf-8
 from django.http import HttpResponse, HttpResponseBadRequest
 from django import forms
-from . import models,zhinput
+from django.db.models import F
+from . import models,zhinput,util
 import json
 from django.forms import model_to_dict
 import requests
 import random
 import time
+from datetime import datetime
 import base64
 # import config
 import os
@@ -25,10 +27,17 @@ def age_from_timestamp(timestamp):
 
 def user_model_to_dict(user_model):
     udict = model_to_dict(user_model)
-    udict['avatar_url'] = full_user_avatar_url(user_model.avatar_url)
+
+    # 先暂时注释掉
+    # udict['avatar_url'] = full_user_avatar_url(user_model.avatar_url)
+
     del udict['password']
     del udict['pw_salt']
     udict['age'] = age_from_timestamp(user_model.birthday)
+
+    # 在这里将user中的datetime转换成正常输出格式的字符串
+
+
     return udict
 
 
@@ -189,8 +198,8 @@ def post_password_sms(request):
 def phone_signup(request):
     try:
         zhinput.all_exists(request.POST, (
-            'nickname', 'phone', 'password', 'verify_location_long', 'verify_location_lat', 'gender', 'birthday', 'clazz', 'block_same_class',
-            'hometown', 'love_status', 'prefer_gender', 'contact', 'region'
+            'nickname', 'phone', 'password', 'gender', 'birthday', 'clazz', 'block_same_class',
+            'hometown', 'love_status', 'prefer_gender', 'contact', 'region','area_num','location_name'
         ))
     except zhinput.ZHInputKeyNotExist as e:
         body = response(e.key + ':not_exists', e.key + ' missing', {})
@@ -224,8 +233,8 @@ def phone_signup(request):
     try:
         nickname = zhinput.as_string(request.POST, 'nickname')
         password = zhinput.as_string(request.POST, 'password')
-        verify_location_long = zhinput.as_float(request.POST, 'verify_location_long')
-        verify_location_lat = zhinput.as_float(request.POST, 'verify_location_lat')
+        # verify_location_long = zhinput.as_float(request.POST, 'verify_location_long')
+        # verify_location_lat = zhinput.as_float(request.POST, 'verify_location_lat')
         avatar = zhinput.as_string(request.POST, 'avatar', default='default_avatar.png')
         gender = zhinput.as_enum(request.POST, 'gender', ('', 'male', 'female'))
         birthday = zhinput.as_int(request.POST, 'birthday')
@@ -241,6 +250,9 @@ def phone_signup(request):
         # {"tag_id":<id>, "content_id": <id>}
         interest_tags = zhinput.as_json(request.POST, 'interest_tags')
         region = zhinput.as_enum(request.POST, 'region', ('', 'west', 'east', 'middle'))
+
+        area_num = zhinput.as_int(request.POST, 'area_num')
+        location_name = zhinput.as_string(request.POST, 'location_name')
     except zhinput.ZHInputNotFloat as e:
         body = response(e.key + ':not_float', e.key + ' is not float', {})
         return HttpResponse(body)
@@ -256,17 +268,13 @@ def phone_signup(request):
 
     pw_salt = models.User.generate_pw_salt()
 
-    print('pw_salt type:',type(pw_salt))
-    print('password type:',type(password))
-    print(type(models.User.encrypt(pw_salt.decode(), password)))
-
     user = models.User(
         nickname=nickname,
         phone=phone,
         pw_salt=pw_salt,
         password=models.User.encrypt(pw_salt.decode(), password), # make_password(str,str,'加密算法') ---> 返回str
-        verify_location_long=verify_location_long,
-        verify_location_lat=verify_location_lat,
+        # verify_location_long=verify_location_long,
+        # verify_location_lat=verify_location_lat,
         avatar_url=avatar,
         gender=gender,
         birthday=birthday,
@@ -281,7 +289,10 @@ def phone_signup(request):
         region=region,
         signup_ua=request.META.get('HTTP_USER_AGENT', ''),
         signup_ip=request.META.get('REMOTE_ADDR', ''),
-        signup_time=int(time.time())
+        signup_time=util.getStrTime(datetime.now()),
+        meet_num=0,
+        area_num=area_num,
+        location_name=location_name
     )
     user.save()
 
@@ -319,6 +330,7 @@ def phone_signup(request):
     phone_verify_model.used = True
     phone_verify_model.save()
 
+    user_dict = user_model_to_dict(user)
     body = response('ok', 'signup success', {
         'user': user_model_to_dict(user)
     })
@@ -328,12 +340,18 @@ def phone_signup(request):
 def phone_signin(request):
     phone = request.POST.get('phone', '')
     password = request.POST.get('password', '')
+
     try:
         phone_model = models.User.objects.get(phone=phone)
         check = phone_model.check_password(password)
         body = ''
         if check:
-            body = response('ok', 'signin success', model_to_dict(phone_model))
+            phone_model.signin_time = util.getStrTime(datetime.now())
+            phone_model.signin_ua = request.META.get('HTTP_USER_AGENT', '')
+            phone_model.signin_ip = request.META.get('REMOTE_ADDR', '')
+            phone_model.save()
+
+            body = response('ok', 'signin success', user_model_to_dict(phone_model))
         else:
             body = response('user:wrong_password', 'wrong password', {})
         return HttpResponse(body)
@@ -341,13 +359,14 @@ def phone_signin(request):
         body = response('phone:not_exists', 'user not exists', {})
         return HttpResponse(body)
 
-
+# 位置更新 ---> 能不能做到区域变化才上传区域编号
 def report_position(request):
     try:
         zhinput.all_exists(request.POST, (
-            'user_id', 'longitude', 'latitude', 'altitude', 'floor',
-            'horizontal_accuracy', 'vertical_accuracy', 'speed',
-            'timestamp', 'heading'
+            'user_id','area_num','location_name','longitude','latitude'
+            # 'user_id', 'longitude', 'latitude', 'altitude', 'floor',
+            # 'horizontal_accuracy', 'vertical_accuracy', 'speed',
+            # 'timestamp', 'heading'
         ))
     except zhinput.ZHInputKeyNotExist as e:
         body = response(e.key + ':not_exists', e.key + ' missing', {})
@@ -355,16 +374,20 @@ def report_position(request):
 
     try:
         user_id = zhinput.as_int(request.POST, 'user_id')
-        longitude = zhinput.as_float(request.POST, 'longitude')
-        latitude = zhinput.as_float(request.POST, 'latitude')
-        altitude = zhinput.as_float(request.POST, 'altitude')
-        floor = zhinput.as_float(request.POST, 'floor')
-        horizontal_accuracy = zhinput.as_float(request.POST, 'horizontal_accuracy')
-        vertical_accuracy = zhinput.as_float(request.POST, 'vertical_accuracy')
-        speed = zhinput.as_float(request.POST, 'speed')
-        timestamp = zhinput.as_float(request.POST, 'timestamp')
-        heading = zhinput.as_float(request.POST, 'heading')
+        area_num = zhinput.as_int(request.POST, 'area_num')
         location_name = zhinput.as_string(request.POST, 'location_name')
+        longitude = zhinput.as_float(request.POST,'longitude')
+        latitude = zhinput.as_float(request.POST,'latitude')
+        # longitude = zhinput.as_float(request.POST, 'longitude')
+        # latitude = zhinput.as_float(request.POST, 'latitude')
+        # altitude = zhinput.as_float(request.POST, 'altitude')
+        # floor = zhinput.as_float(request.POST, 'floor')
+        # horizontal_accuracy = zhinput.as_float(request.POST, 'horizontal_accuracy')
+        # vertical_accuracy = zhinput.as_float(request.POST, 'vertical_accuracy')
+        # speed = zhinput.as_float(request.POST, 'speed')
+        # timestamp = zhinput.as_float(request.POST, 'timestamp')
+        # heading = zhinput.as_float(request.POST, 'heading')
+        # location_name = zhinput.as_string(request.POST, 'location_name')
     except zhinput.ZHInputNotInt as e:
         body = response(e.key + ':not_int', e.key + ' is not int', {})
         return HttpResponse(body)
@@ -373,22 +396,84 @@ def report_position(request):
         return HttpResponse(body)
 
     try:
+        # 更新user并储存
         user = models.User.objects.get(pk=user_id)
-        pos_model = models.UserPosition(
+
+        # user这两项有待商榷
+        user.area_num = area_num
+        user.location_name = location_name
+        user.save()
+
+        # 储存userPosition
+        user_position = models.UserPosition(
             user=user,
+            area_num=area_num,
+            location_name=location_name,
             longitude=longitude,
-            latitude=latitude,
-            altitude=altitude,
-            floor=floor,
-            horizontal_accuracy=horizontal_accuracy,
-            vertical_accuracy=vertical_accuracy,
-            speed=speed,
-            timestamp=timestamp,
-            heading=heading,
-            create_time=int(time.time()),
-            location_name=location_name
+            latitude=latitude
         )
-        pos_model.save()
+        user_position.save()
+
+        # pos_model = models.UserPosition(
+        #     user=user,
+        #     longitude=longitude,
+        #     latitude=latitude,
+        #     altitude=altitude,
+        #     floor=floor,
+        #     horizontal_accuracy=horizontal_accuracy,
+        #     vertical_accuracy=vertical_accuracy,
+        #     speed=speed,
+        #     timestamp=timestamp,
+        #     heading=heading,
+        #     create_time=int(time.time()),
+        #     location_name=location_name
+        # )
+
+        # 进行相遇算法的判断！！！
+        # 1.遍历所有在该区域的人
+        time = util.getStrTime(datetime.now())
+        meetUserList = models.User.objects.filter(area_num=area_num).exclude(pk=user_id)
+        if len(meetUserList) > 0:
+            for other in meetUserList:
+                user_meet = models.UserMeet(
+                    user=user,
+                    other=other,
+                    area_num=area_num,
+                    location_name=location_name,
+                    meet_time=time
+                )
+                user_meet.save()
+
+                other_meet = models.UserMeet(
+                    user=other,
+                    other=user,
+                    area_num=area_num,
+                    location_name=location_name,
+                    meet_time=time
+                )
+                other_meet.save()
+
+                other.meet_num = F('meet_num') + 1
+                other.save()
+
+                # 处理UserMeetHistory
+                user_meet_histroy = models.UserMeetHistory.objects.get_or_create(
+                    user=user,
+                    other=other
+                )
+                user_meet_histroy.meet_num = F('meet_num') + 1
+                user_meet_histroy.save()
+
+                other_meet_history = models.UserMeetHistory.objects.get_or_create(
+                    user=other,
+                    other=user
+                )
+                other_meet_history.meet_num = F('meet_num') + 1
+                other_meet_history.save()
+
+            user.meet_num = F('meet_num') + len(meetUserList)
+            user.save()
+
     except models.User.DoesNotExist:
         body = response('user:not_exists', 'user doesnt exist', {})
         return HttpResponse(body)
@@ -775,3 +860,6 @@ def UserSignUp(request):
 
 def phone(request):
     return render(request,'phone.html')
+
+def login(request):
+    return render(request,'login.html')

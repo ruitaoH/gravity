@@ -42,5 +42,6 @@ urlpatterns = [
 
 
     url(r'^api/user/$',views.UserSignUp),
-    url(r'^api/user/phone/$',views.phone)
+    url(r'^api/user/phone/$',views.phone),
+    url(r'^api/user/login/$',views.login)
 ]
