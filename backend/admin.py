@@ -30,7 +30,15 @@ admin.site.index = index_decorator(admin.site.index)
 admin.site.app_index = index_decorator(admin.site.app_index)
 
 # 用户
-admin.site.register(models.User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'phone',
+        'nickname',
+        'area_num'
+    )
+
+admin.site.register(models.User,UserAdmin)
 
 # 用户相遇
 class UserMeetAdmin(admin.ModelAdmin):
@@ -44,7 +52,7 @@ class UserMeetAdmin(admin.ModelAdmin):
         'longitude',
         'latitude',
     )
-    list_filter = ('area_num','user__phone')
+    search_fields = ('user__phone',)
 
 admin.site.register(models.UserMeet,UserMeetAdmin)
 
@@ -55,10 +63,10 @@ class UserPositionAdmin(admin.ModelAdmin):
         'area_num',
         'location_name',
         'create_time',
+        'leave_time',
         'longitude',
         'latitude'
     )
-    list_filter = ('area_num','user__phone')
     search_fields = ('user__phone',)
 
 admin.site.register(models.UserPosition,UserPositionAdmin)
@@ -67,7 +75,17 @@ admin.site.register(models.UserPosition,UserPositionAdmin)
 admin.site.register(models.TodayUser)
 
 # 相遇记录
-admin.site.register(models.UserMeetHistory)
+class UserMeetHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'other',
+        'meet_num',
+        'matching',
+        'fate'
+    )
+    search_fields = ('user__phone',)
+
+admin.site.register(models.UserMeetHistory,UserMeetHistoryAdmin)
 
 # 用户兴趣标签 能量石
 admin.site.register(models.UserInterestTag)

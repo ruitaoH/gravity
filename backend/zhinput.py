@@ -35,7 +35,6 @@ class ZHInputStringTooShort(ZHInputException):
         super(ZHInputStringNotLongEnough, self).__init__(key)
         self.value = value
 
-
 class ZHInputEnumNotExists(ZHInputException):
     def __init__(self, key, value):
         super(ZHInputEnumNotExists, self).__init__(key)
@@ -98,7 +97,6 @@ def as_bool(data, key, true_value='true', default=False):
         else:
             return False
     return default
-
 
 def as_json(data, key, default=None):
     if key in data:

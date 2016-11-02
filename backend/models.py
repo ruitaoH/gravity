@@ -270,7 +270,7 @@ class UserMeet(models.Model):
     # 主用户
     user = models.ForeignKey(User, related_name='user_meet_user',verbose_name='主用户')
     # 相遇的用户
-    other = models.ForeignKey(User, related_name='user_meet_other',verbose_name='相遇的用户')
+    other = models.ForeignKey(User, related_name='user_meet_other',verbose_name='相遇用户')
     # 区域编号
     area_num = models.IntegerField(default=-1,verbose_name='区域编号')
     # 相遇地点
@@ -289,17 +289,22 @@ class UserMeet(models.Model):
 
 class UserMeetHistory(models.Model):
     # 主用户
-    user = models.ForeignKey(User, related_name='user_meet_user_history')
+    user = models.ForeignKey(User, related_name='user_meet_user_history',verbose_name='主用户')
     # 相遇的用户
-    other = models.ForeignKey(User, related_name='user_meet_other_history')
+    other = models.ForeignKey(User, related_name='user_meet_other_history',verbose_name='相遇用户')
     # 相遇次数
-    meet_num = models.IntegerField(default=0)
+    meet_num = models.IntegerField(default=0,verbose_name='相遇次数')
     # 匹配度
+    matching = models.IntegerField(default=0,verbose_name='匹配度')
     # 缘分值
+    fate = models.IntegerField(default=0,verbose_name='缘分值')
+
+    def __str__(self):
+        return str(self.user) + ' ' + str(self.other)
 
 class UserPosition(models.Model):
     # UserPosition通过外键指向一个User
-    user = models.ForeignKey(User,verbose_name='主用户')
+    user = models.ForeignKey(User,verbose_name='主用户',related_name='fkUserPosition2User')
 
     # 经纬度
     longitude = models.FloatField(default=0.0,verbose_name='经度')
@@ -308,9 +313,12 @@ class UserPosition(models.Model):
     # 区域编号
     area_num = models.IntegerField(default=-1, verbose_name='区域编号')
     # 相遇地点
-    location_name = models.CharField(max_length=32, default='', verbose_name='相遇地点')
+    location_name = models.CharField(max_length=32, default='', verbose_name='地点名称')
+
     # 创建时间
     create_time = models.CharField(max_length=32,default=util.getStrTime(datetime.now()),verbose_name='创建时间')
+    # 离开时间
+    leave_time = models.CharField(max_length=32,null=True,verbose_name='离开时间')
 
     # def distance_to(self, other):
     #     long_diff = self.longitude - other.longitude
