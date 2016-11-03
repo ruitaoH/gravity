@@ -108,6 +108,15 @@ def as_json(data, key, default=None):
         return {}
     return default
 
+def as_str2json(data, key, default=None):
+    if key in data:
+        try:
+            return json.loads(data)[key]
+        except ValueError:
+            raise ZHInputNotJSONString(key, data)
+    if default is None:
+        return {}
+    return default
 
 def filter_by_list(data, filter_list):
     result = {}
