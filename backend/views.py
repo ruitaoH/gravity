@@ -297,7 +297,7 @@ def phone_signup(request):
         pw_salt = models.User.generate_pw_salt()
 
         # 注册时间
-        signup_time = time.strftime("%Y-%m-%d %H:%M-%S", time.localtime(timestamp))
+        signup_time = util.timestamp2Str(timestamp)
 
         user = models.User(
             nickname=nickname,
@@ -516,7 +516,7 @@ def report_position(request):
                 if area_num != -1:
                     user = models.User.objects.get(pk=user_id)
 
-                    create_time = time.strftime("%Y-%m-%d %H:%M-%S", time.localtime(timestamp))
+                    create_time = util.timestamp2Str(timestamp)
 
                     # 1.更新最新一条UserPosition的leave_time
                     user_position_cursor = models.UserPosition.objects.filter(
@@ -621,7 +621,7 @@ def report_position(request):
                         if area_num != -1:
                             user = models.User.objects.get(pk=user_id)
 
-                            create_time = time.strftime("%Y-%m-%d %H:%M-%S", time.localtime(timestamp))
+                            create_time = util.timestamp2Str(timestamp)
 
                             # 1.更新最新一条UserPosition的leave_time
                             user_position_cursor = models.UserPosition.objects.filter(
@@ -828,7 +828,7 @@ def report_position(request):
                         if area_num != -1:
                             user = models.User.objects.get(pk=user_id)
 
-                            create_time = time.strftime("%Y-%m-%d %H:%M-%S", time.localtime(timestamp))
+                            create_time = util.timestamp2Str(timestamp)
 
                             # 1.更新最新一条UserPosition的leave_time
                             user_position_cursor = models.UserPosition.objects.filter(
