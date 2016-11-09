@@ -357,60 +357,62 @@ def phone_signup(request):
             user_tag_model.save()
 
         # 添加userposition信息
-        if area_num != -1:
-            # 1.存储UserPosition
-            new_user_position = models.UserPosition(
-                user=user,
-                area_num=area_num,
-                location_name=location_name,
-                longitude=0.0,
-                latitude=0.0,
-                create_time=signup_time
-            )
-            new_user_position.save()
 
-            # 2.去寻找同区域的相遇用户
-            meet_user_list = models.User.objects.filter(area_num=area_num).exclude(pk=user.pk)
-            if len(meet_user_list) > 0:
-                for other in meet_user_list:
-                    # (1)创建新的user的UserMeet
-                    user_meet = models.UserMeet(
-                        user=user,
-                        other=other,
-                        area_num=area_num,
-                        location_name=location_name,
-                        meet_time=signup_time,
-                        meet_distance=util.getMeetDistance()
-                    )
-                    user_meet.save()
+        # if area_num != -1: 注册的时候不卡-1否则有可能出问题
 
-                    other_meet = models.UserMeet(
-                        user=other,
-                        other=user,
-                        area_num=area_num,
-                        location_name=location_name,
-                        meet_time=signup_time,
-                        meet_distance=util.getMeetDistance()
-                    )
-                    other_meet.save()
+        # 1.存储UserPosition
+        new_user_position = models.UserPosition(
+            user=user,
+            area_num=area_num,
+            location_name=location_name,
+            longitude=0.0,
+            latitude=0.0,
+            create_time=signup_time
+        )
+        new_user_position.save()
 
-                    # (2)更新UserMeetHistory
-                    user_meet_histroy = models.UserMeetHistory.objects.get_or_create(
-                        user=user,
-                        other=other
-                    )
-                    user_meet_histroy[0].meet_num = F('meet_num') + 1
-                    user_meet_histroy[0].save()
+        # 2.去寻找同区域的相遇用户
+        meet_user_list = models.User.objects.filter(area_num=area_num).exclude(pk=user.pk)
+        if len(meet_user_list) > 0:
+            for other in meet_user_list:
+                # (1)创建新的user的UserMeet
+                user_meet = models.UserMeet(
+                    user=user,
+                    other=other,
+                    area_num=area_num,
+                    location_name=location_name,
+                    meet_time=signup_time,
+                    meet_distance=util.getMeetDistance()
+                )
+                user_meet.save()
 
-                    other_meet_history = models.UserMeetHistory.objects.get_or_create(
-                        user=other,
-                        other=user
-                    )
-                    other_meet_history[0].meet_num = F('meet_num') + 1
-                    other_meet_history[0].save()
+                other_meet = models.UserMeet(
+                    user=other,
+                    other=user,
+                    area_num=area_num,
+                    location_name=location_name,
+                    meet_time=signup_time,
+                    meet_distance=util.getMeetDistance()
+                )
+                other_meet.save()
 
-                user.meet_num = F('meet_num') + len(meet_user_list)
-                user.save()
+                # (2)更新UserMeetHistory
+                user_meet_histroy = models.UserMeetHistory.objects.get_or_create(
+                    user=user,
+                    other=other
+                )
+                user_meet_histroy[0].meet_num = F('meet_num') + 1
+                user_meet_histroy[0].save()
+
+                other_meet_history = models.UserMeetHistory.objects.get_or_create(
+                    user=other,
+                    other=user
+                )
+                other_meet_history[0].meet_num = F('meet_num') + 1
+                other_meet_history[0].save()
+
+            user.meet_num = F('meet_num') + len(meet_user_list)
+            user.save()
 
         phone_verify_model.used = True
         phone_verify_model.save()
@@ -475,10 +477,6 @@ def report_position(request):
             return HttpResponse(body)
 
         try:
-            # 调试数据接收
-            print(POST)
-            print(json.loads(POST))
-
             datas = zhinput.as_str2json(POST, 'datas')
         except zhinput.ZHInputNotJSONString as e:
             body = response(e.key + ':not_json', e.key + 'is not json', {})
@@ -519,6 +517,8 @@ def report_position(request):
                     create_time = util.timestamp2Str(timestamp)
 
                     # 1.更新最新一条UserPosition的leave_time
+
+                    # 判断是否有之前的位置记录信息
                     user_position_cursor = models.UserPosition.objects.filter(
                         user=user,
                         leave_time__isnull=True
@@ -1069,7 +1069,7 @@ def update_password(request):
         try:
             user_model = models.User.objects.get(phone=phone)
             user_model.pw_salt = models.User.generate_pw_salt()
-            user_model.password = models.User.encrypt(user_model.pw_salt, password)
+            user_model.password = models.User.encrypt(user_model.pw_salt.decode(), password)
             user_model.save()
         except models.User.DoesNotExist:
             body = response('user:not_exists', 'user doesnt exist', {})
