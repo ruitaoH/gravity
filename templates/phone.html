@@ -3,11 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+
+    <script type="text/javascript" src="/static/jquery-2.2.0.js"></script>
 </head>
 <body>
-<form action="/backend/api/user/signup_sms" method="post">
-    手机:<input type="text" name="phone" />
-    <input type="submit" />
-</form>
+<button>向页面发送 HTTP POST 请求，并获得返回的结果</button>
+
+<script type="text/javascript">
+    datas = {
+        'phone':'15927476550'
+    };
+
+    $('button').click(function(){
+        $.post('http://localhost:9999/backend/api/user/signup_sms',
+                JSON.stringify(datas)
+        ,function(data,status){
+            console.log(data);
+            console.log(status);
+        })
+    })
+</script>
 </body>
 </html>
